@@ -193,38 +193,49 @@ function App() {
     note: "",
   });
 
-  useEffect(() => {
-    if (user) {
-      fetchTransactions();
-    }
-  }, [user]);
-
   const fetchTransactions = async () => {
     try {
       setLoading(true);
 
       const token = localStorage.getItem("spendlyToken");
+      const workspaceId = localStorage.getItem("spendlyWorkspaceId");
 
-      const response = await fetch(API_URL, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to fetch transactions");
+      if (!token || !workspaceId) {
+        setTransactions([]);
+        return;
       }
+
+      const response = await fetch(
+        `${API_URL}?workspaceId=${workspaceId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
 
       const data = await response.json();
 
+      if (!response.ok) {
+        throw new Error(
+          data.message || "Failed to fetch transactions"
+        );
+      }
+
       setTransactions(data);
     } catch (error) {
-      console.error(error);
+      console.error("Fetch transactions error:", error);
       setTransactions([]);
     } finally {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (user) {
+      fetchTransactions();
+    }
+  }, [user]);
 
   const addTransaction = async (e) => {
     e.preventDefault();
@@ -235,6 +246,17 @@ function App() {
 
     try {
       const token = localStorage.getItem("spendlyToken");
+      const workspaceId = localStorage.getItem("spendlyWorkspaceId");
+
+      if (!token) {
+        alert("Please login again.");
+        return;
+      }
+
+      if (!workspaceId) {
+        alert("No workspace found. Please logout and login again.");
+        return;
+      }
 
       const response = await fetch(API_URL, {
         method: "POST",
@@ -243,18 +265,25 @@ function App() {
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-          ...form,
+          title: form.title,
           amount: Number(form.amount),
+          category: form.category,
+          type: form.type,
+          date: form.date,
+          note: form.note,
+          workspaceId,
         }),
       });
 
+      const data = await response.json();
+
       if (!response.ok) {
-        throw new Error("Failed to add transaction");
+        throw new Error(
+          data.message || "Failed to add transaction"
+        );
       }
 
-      const newTransaction = await response.json();
-
-      setTransactions((prev) => [newTransaction, ...prev]);
+      setTransactions((prev) => [data, ...prev]);
 
       setForm({
         title: "",
@@ -267,8 +296,8 @@ function App() {
 
       setShowModal(false);
     } catch (error) {
-      console.error(error);
-      alert("Could not add transaction.");
+      console.error("Add transaction error:", error);
+      alert(error.message || "Could not add transaction.");
     }
   };
 

@@ -1,7 +1,14 @@
 import { useState } from "react";
-import { CircleDollarSign, Eye, EyeOff, LogIn, UserPlus } from "lucide-react";
+import {
+  CircleDollarSign,
+  Eye,
+  EyeOff,
+  LogIn,
+  UserPlus,
+} from "lucide-react";
 
 const AUTH_API = "http://localhost:5000/api/auth";
+const WORKSPACE_API = "http://localhost:5000/api/workspaces";
 
 function Auth({ onLogin }) {
   const [mode, setMode] = useState("login");
@@ -23,6 +30,66 @@ function Auth({ onLogin }) {
     });
 
     setError("");
+  };
+
+  const setupWorkspace = async (token, user) => {
+    try {
+      const response = await fetch(WORKSPACE_API, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error("Could not load workspaces");
+      }
+
+      let workspaces = await response.json();
+
+      // If user has no workspace, create a default one
+      if (!workspaces.length) {
+        const createResponse = await fetch(WORKSPACE_API, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            name: `${user.name}'s Workspace`,
+          }),
+        });
+
+        if (!createResponse.ok) {
+          throw new Error("Could not create workspace");
+        }
+
+        const newWorkspace = await createResponse.json();
+        workspaces = [newWorkspace];
+      }
+
+      // Use the first workspace for now
+      const activeWorkspace = workspaces[0];
+
+      localStorage.setItem(
+        "spendlyWorkspaceId",
+        activeWorkspace._id
+      );
+
+      localStorage.setItem(
+        "spendlyWorkspace",
+        JSON.stringify(activeWorkspace)
+      );
+
+      localStorage.setItem(
+        "spendlyWorkspaces",
+        JSON.stringify(workspaces)
+      );
+
+      return activeWorkspace;
+    } catch (error) {
+      console.error("Workspace setup error:", error);
+      throw error;
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -52,13 +119,18 @@ function Auth({ onLogin }) {
       }
 
       localStorage.setItem("spendlyToken", data.token);
+
       localStorage.setItem(
         "spendlyUser",
         JSON.stringify(data.user)
       );
 
+      // Setup/load user's workspace
+      await setupWorkspace(data.token, data.user);
+
       onLogin(data.user);
     } catch (error) {
+      console.error(error);
       setError(error.message);
     } finally {
       setLoading(false);
@@ -74,6 +146,8 @@ function Auth({ onLogin }) {
       email: "",
       password: "",
     });
+
+    setShowPassword(false);
   };
 
   return (
