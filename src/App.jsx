@@ -50,8 +50,7 @@ import { useEffect, useMemo, useState } from "react";
 import "./index.css";
 import Auth from "./Auth";
 
-const API_URL = "http://localhost:5000/api/expenses";
-
+const API_URL = "https://spendly-api-henna.vercel.app/api/expenses";
 const pageVariants = {
   initial: {
     opacity: 0,
