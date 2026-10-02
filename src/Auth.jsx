@@ -15,8 +15,8 @@ import {
   CheckCircle2,
 } from "lucide-react";
 
-const AUTH_API = "http://localhost:5000/api/auth";
-const WORKSPACE_API = "http://localhost:5000/api/workspaces";
+const AUTH_API = "https://spendly-api-henna.vercel.app/api/auth";
+const WORKSPACE_API = "https://spendly-api-henna.vercel.app/api/workspaces";
 
 function Auth({ onLogin }) {
   const [mode, setMode] = useState("login");
@@ -998,3 +998,4 @@ function TrendingMini() {
 }
 
 export default Auth;
+
