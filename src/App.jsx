@@ -1,4 +1,4 @@
-import {
+﻿import {
   ArrowDownLeft,
   ArrowUpRight,
   Bell,
@@ -48,8 +48,6 @@ import {
 import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useMemo, useState } from "react";
 import "./index.css";
-import Auth from "./Auth";
-
 const API_URL = "https://spendly-api-henna.vercel.app/api/expenses";
 const pageVariants = {
   initial: {
@@ -275,14 +273,11 @@ function AnimatedNumber({ value, prefix = "PKR " }) {
 
 function App() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-
-  const [user, setUser] = useState(() => {
-    const savedUser = localStorage.getItem("spendlyUser");
-
-    return savedUser ? JSON.parse(savedUser) : null;
-  });
-
-  const [activePage, setActivePage] = useState("dashboard");
+  const user = {
+    name: "Demo User",
+    email: "demo@spendly.app",
+  };
+const [activePage, setActivePage] = useState("dashboard");
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -308,30 +303,11 @@ function App() {
     date: toDateInputValue(new Date()),
     note: "",
   });
-
   const fetchTransactions = async () => {
     try {
       setLoading(true);
 
-      const token = localStorage.getItem("spendlyToken");
-      const workspaceId = localStorage.getItem(
-        "spendlyWorkspaceId"
-      );
-
-      if (!token || !workspaceId) {
-        setTransactions([]);
-        return;
-      }
-
-      const response = await fetch(
-        `${API_URL}?workspaceId=${workspaceId}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
+      const response = await fetch(API_URL);
       const data = await response.json();
 
       if (!response.ok) {
@@ -340,9 +316,15 @@ function App() {
         );
       }
 
-      setTransactions(data);
+      setTransactions(
+        Array.isArray(data) ? data : []
+      );
     } catch (error) {
-      console.error("Fetch transactions error:", error);
+      console.error(
+        "Fetch transactions error:",
+        error
+      );
+
       setTransactions([]);
     } finally {
       setLoading(false);
@@ -350,48 +332,28 @@ function App() {
   };
 
   useEffect(() => {
-    if (user) {
-      fetchTransactions();
-    }
-  }, [user]);
-
+    fetchTransactions();
+  }, []);
   const addTransaction = async (e) => {
     e.preventDefault();
 
-    if (!form.title.trim() || !form.amount) return;
+    if (!form.title.trim() || !form.amount) {
+      return;
+    }
 
     try {
-      const token = localStorage.getItem("spendlyToken");
-      const workspaceId = localStorage.getItem(
-        "spendlyWorkspaceId"
-      );
-
-      if (!token) {
-        alert("Please login again.");
-        return;
-      }
-
-      if (!workspaceId) {
-        alert(
-          "No workspace found. Please logout and login again."
-        );
-        return;
-      }
-
       const response = await fetch(API_URL, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-          title: form.title,
+          title: form.title.trim(),
           amount: Number(form.amount),
           category: form.category,
           type: form.type,
           date: form.date,
           note: form.note,
-          workspaceId,
         }),
       });
 
@@ -403,7 +365,10 @@ function App() {
         );
       }
 
-      setTransactions((prev) => [data, ...prev]);
+      setTransactions((prev) => [
+        data,
+        ...prev,
+      ]);
 
       setForm({
         title: "",
@@ -416,42 +381,62 @@ function App() {
 
       setShowModal(false);
     } catch (error) {
-      console.error("Add transaction error:", error);
-      alert(error.message || "Could not add transaction.");
+      console.error(
+        "Add transaction error:",
+        error
+      );
+
+      alert(
+        error.message ||
+          "Could not add transaction."
+      );
     }
   };
-
   const deleteTransaction = async (id) => {
     const confirmed = window.confirm(
       "Are you sure you want to delete this transaction?"
     );
 
-    if (!confirmed) return;
+    if (!confirmed) {
+      return;
+    }
 
     try {
-      const token = localStorage.getItem("spendlyToken");
+      const response = await fetch(
+        `${API_URL}/${id}`,
+        {
+          method: "DELETE",
+        }
+      );
 
-      const response = await fetch(`${API_URL}/${id}`, {
-        method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const data = await response.json();
 
       if (!response.ok) {
-        throw new Error("Failed to delete transaction");
+        throw new Error(
+          data.message ||
+            "Failed to delete transaction"
+        );
       }
 
       setTransactions((prev) =>
-        prev.filter((transaction) => transaction._id !== id)
+        prev.filter(
+          (transaction) =>
+            transaction._id !== id
+        )
       );
     } catch (error) {
-      console.error(error);
-      alert("Could not delete transaction.");
+      console.error(
+        "Delete transaction error:",
+        error
+      );
+
+      alert(
+        error.message ||
+          "Could not delete transaction."
+      );
     }
   };
-
-  const totalIncome = useMemo(
+const totalIncome = useMemo(
     () =>
       transactions
         .filter((t) => t.type === "income")
@@ -616,17 +601,10 @@ function App() {
     setSidebarOpen(false);
     setShowProfileMenu(false);
   };
-
   const handleLogout = () => {
-    localStorage.removeItem("spendlyToken");
-    localStorage.removeItem("spendlyUser");
-    localStorage.removeItem("spendlyWorkspaceId");
-
-    setUser(null);
-    setTransactions([]);
+    setShowProfileMenu(false);
   };
-
-  const navItems = [
+const navItems = [
     {
       id: "dashboard",
       label: "Overview",
@@ -687,7 +665,7 @@ function App() {
 
             <p>
               {transaction.category}
-              <span>•</span>
+              <span>â€¢</span>
               {formatDate(transaction.date)}
             </p>
           </div>
@@ -943,7 +921,7 @@ function App() {
             </span>
 
             <span className="chart-period">
-              Jan — Dec
+              Jan â€” Dec
             </span>
           </div>
 
@@ -1734,7 +1712,7 @@ function App() {
           </div>
 
           <div className="analytics-value">
-            {categoryTotals[0]?.category || "—"}
+            {categoryTotals[0]?.category || "â€”"}
           </div>
 
           <div className="stat-bottom">
@@ -2102,18 +2080,7 @@ function App() {
 
     return <Dashboard />;
   };
-
-  if (!user) {
-    return (
-      <Auth
-        onLogin={(loggedInUser) => {
-          setUser(loggedInUser);
-        }}
-      />
-    );
-  }
-
-  return (
+return (
     <div className="app-shell">
       <AnimatePresence>
         {sidebarOpen && (
@@ -2664,4 +2631,5 @@ function App() {
 }
 
 export default App;
+
 
